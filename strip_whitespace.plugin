@@ -1,0 +1,9 @@
+[Plugin]
+Loader=python3
+Module=strip_whitespace
+IAge=3
+Name=Strip Whitespace
+Description=Strips whitespaces
+Authors=Jonian Guveli <jonian@hardpixel.eu>
+Copyright=Copyright © 2009 Hardpixel
+Website=http://hardpixel.eu
