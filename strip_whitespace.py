@@ -1,9 +1,9 @@
 import gi, re
 
-gi.require_version('Gdk', '3.0')
 gi.require_version('Gtk', '3.0')
+gi.require_version('Gedit', '3.0')
 
-from gi.repository import GObject, Gdk, Gtk, Gedit
+from gi.repository import GObject, Gtk, Gedit
 
 
 class StripWhitespaceWindowActivatable(GObject.Object, Gedit.WindowActivatable):
