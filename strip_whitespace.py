@@ -12,8 +12,8 @@ class StripWhitespaceWindowActivatable(GObject.Object, Gedit.WindowActivatable):
   def __init__(self):
     GObject.Object.__init__(self)
 
-    self._handler_id = None
     self._document   = None
+    self._handler_id = None
 
   def do_activate(self):
     self._handler_id = self.window.connect('tab-added', self.on_tab_added)
@@ -26,47 +26,45 @@ class StripWhitespaceWindowActivatable(GObject.Object, Gedit.WindowActivatable):
     self._document.connect('save', self.on_document_save)
 
   def on_document_save(self, document, data=None):
+    self._document.begin_user_action()
     self.strip_trailing_spaces()
     self.strip_eof_newlines()
+    self._document.end_user_action()
 
   def strip_trailing_spaces(self):
-    text = self._document.get_text(self._document.get_start_iter(), self._document.get_end_iter(), False)
-    compiledpattern = re.compile('.*?([ \t]+)$', flags=re.MULTILINE)
+    line   = 0
+    lmatch = 0
 
-    start_iter = self._document.get_start_iter()
-    end_iter   = self._document.get_start_iter()
+    itstart = self._document.get_start_iter()
+    itend   = self._document.get_end_iter()
 
-    line_no        = 0 # Last matched line no
-    last_match_pos = 0 # Last matched position in the string
+    text  = self._document.get_text(itstart, itend, False)
+    regex = re.compile('.*?([ \t]+)$', flags=re.MULTILINE)
 
-    for match in re.finditer(compiledpattern, text):
-      # Count the newlines since the last match
-      line_no += text.count('\n', last_match_pos, match.start())
+    for match in re.finditer(regex, text):
+      line += text.count('\n', lmatch, match.start())
 
-      # Work out the offsets within the line
-      whitespace_start = match.start(1) - match.start()
-      whitespace_end   = match.end(1) - match.start()
+      wsstart = match.start(1) - match.start()
+      wsend   = match.end(1) - match.start()
 
-      # Update the iterators and do the deletion
-      start_iter.set_line(line_no)
-      start_iter.set_line_offset(whitespace_start)
+      itstart.set_line(line)
+      itstart.set_line_offset(wsstart)
 
-      end_iter.set_line(line_no)
-      end_iter.set_line_offset(whitespace_end)
+      itend.set_line(line)
+      itend.set_line_offset(wsend)
 
-      self._document.delete(start_iter, end_iter)
+      self._document.delete(itstart, itend)
 
-      # Update the last match position
-      last_match_pos = match.end()
+      lmatch = match.end()
 
   def strip_eof_newlines(self):
-    itr = self._document.get_end_iter()
+    itend = self._document.get_end_iter()
 
-    if itr.starts_line():
-      while itr.backward_char():
-        if not itr.ends_line():
-          itr.forward_to_line_end()
+    if itend.starts_line():
+      while itend.backward_char():
+        if not itend.ends_line():
+          itend.forward_to_line_end()
           break
 
-      self._document.delete(itr, self._document.get_end_iter())
+      self._document.delete(itend, self._document.get_end_iter())
       self._document.insert(self._document.get_end_iter(), "\n")
