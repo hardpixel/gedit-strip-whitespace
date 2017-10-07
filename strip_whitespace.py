@@ -1,9 +1,8 @@
 import gi, re
 
-gi.require_version('Gtk', '3.0')
 gi.require_version('Gedit', '3.0')
 
-from gi.repository import GObject, Gtk, Gedit
+from gi.repository import GObject, Gedit
 
 
 class StripWhitespaceWindowActivatable(GObject.Object, Gedit.WindowActivatable):
@@ -13,26 +12,29 @@ class StripWhitespaceWindowActivatable(GObject.Object, Gedit.WindowActivatable):
   def __init__(self):
     GObject.Object.__init__(self)
 
+    self._handler_id = None
+    self._document   = None
+
   def do_activate(self):
-    self.handler_id = self.window.connect('tab-added', self.on_tab_added)
+    self._handler_id = self.window.connect('tab-added', self.on_tab_added)
 
   def do_deactivate(self):
-    self.window.disconnect(self.handler_id)
+    self.window.disconnect(self._handler_id)
 
   def on_tab_added(self, window, tab, data=None):
-    self.doc = tab.get_document()
-    self.doc.connect('save', self.on_document_save)
+    self._document = tab.get_document()
+    self._document.connect('save', self.on_document_save)
 
   def on_document_save(self, document, data=None):
     self.strip_trailing_spaces()
     self.strip_eof_newlines()
 
   def strip_trailing_spaces(self):
-    text = self.doc.get_text(self.doc.get_start_iter(), self.doc.get_end_iter(), False)
+    text = self._document.get_text(self._document.get_start_iter(), self._document.get_end_iter(), False)
     compiledpattern = re.compile('.*?([ \t]+)$', flags=re.MULTILINE)
 
-    start_iter = self.doc.get_start_iter()
-    end_iter   = self.doc.get_start_iter()
+    start_iter = self._document.get_start_iter()
+    end_iter   = self._document.get_start_iter()
 
     line_no        = 0 # Last matched line no
     last_match_pos = 0 # Last matched position in the string
@@ -52,13 +54,13 @@ class StripWhitespaceWindowActivatable(GObject.Object, Gedit.WindowActivatable):
       end_iter.set_line(line_no)
       end_iter.set_line_offset(whitespace_end)
 
-      self.doc.delete(start_iter, end_iter)
+      self._document.delete(start_iter, end_iter)
 
       # Update the last match position
       last_match_pos = match.end()
 
   def strip_eof_newlines(self):
-    itr = self.doc.get_end_iter()
+    itr = self._document.get_end_iter()
 
     if itr.starts_line():
       while itr.backward_char():
@@ -66,5 +68,5 @@ class StripWhitespaceWindowActivatable(GObject.Object, Gedit.WindowActivatable):
           itr.forward_to_line_end()
           break
 
-      self.doc.delete(itr, self.doc.get_end_iter())
-      self.doc.insert(self.doc.get_end_iter(), "\n")
+      self._document.delete(itr, self._document.get_end_iter())
+      self._document.insert(self._document.get_end_iter(), "\n")
